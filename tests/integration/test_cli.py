@@ -50,7 +50,7 @@ def test_input_from_stdin(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr("sys.stdin", io.StringIO(SPEC_JSON))
+    monkeypatch.setattr("sys.stdin", stdin_bytes(SPEC_JSON.encode()))
 
     exit_code = run_service(parse_settings(["-i", "-"]), client)
 
@@ -81,3 +81,50 @@ def test_unreachable_service_exits_with_1(capsys: pytest.CaptureFixture[str]) ->
 
     assert exit_code == 1
     assert "could not reach" in capsys.readouterr().err
+
+
+def test_input_with_byte_order_mark_is_accepted(
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Windows PowerShell writes files and pipes stdin as UTF-8 with a BOM.
+    input_file = tmp_path / "payload.json"
+    input_file.write_text(SPEC_JSON, encoding="utf-8-sig")
+    monkeypatch.setattr("sys.stdin", stdin_bytes(SPEC_JSON.encode("utf-8-sig")))
+
+    assert run_service(parse_settings(["-i", str(input_file)]), client) == 0
+    assert run_service(parse_settings(["-i", "-"]), client) == 0
+    outputs = [
+        json.loads(line)["output"] for line in capsys.readouterr().out.splitlines()
+    ]
+    assert outputs == [SPEC_OUTPUT, SPEC_OUTPUT]
+
+
+def test_stdin_is_decoded_as_utf8(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Windows decodes piped stdin with its code page (cp1252) unless told otherwise.
+    body = json.dumps({"list_1": ["café"], "list_2": ["straße"]}, ensure_ascii=False)
+    monkeypatch.setattr("sys.stdin", stdin_bytes(body.encode()))
+
+    assert run_service(parse_settings(["-i", "-"]), client) == 0
+    assert json.loads(capsys.readouterr().out)["output"] == "CAFÉ, STRASSE"
+
+
+def test_input_that_is_not_utf8_exits_with_1(
+    client: TestClient, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    input_file = tmp_path / "payload.json"
+    input_file.write_bytes(b'{"list_1": ["\xff"], "list_2": ["b"]}')
+
+    assert run_service(parse_settings(["-i", str(input_file)]), client) == 1
+    assert "not valid UTF-8" in capsys.readouterr().err
+
+
+def stdin_bytes(data: bytes) -> io.TextIOWrapper:
+    """Return a stand-in for sys.stdin whose .buffer yields these raw bytes."""
+    return io.TextIOWrapper(io.BytesIO(data))

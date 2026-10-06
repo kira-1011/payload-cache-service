@@ -14,10 +14,14 @@ def load_payload(settings: CliSettings) -> PayloadInput:
     """Return the payload from --json, or from the --input file (- reads stdin)."""
     if settings.json_body is not None:
         return PayloadInput.model_validate_json(settings.json_body)
+    # JSON is UTF-8 (RFC 8259), so decode it explicitly rather than with the locale's code
+    # page (cp1252 on Windows). utf-8-sig also drops the BOM Windows PowerShell adds.
     if settings.input == "-":
-        return PayloadInput.model_validate_json(sys.stdin.read())
-    with open(str(settings.input), encoding="utf-8") as file:
-        return PayloadInput.model_validate_json(file.read())
+        text = sys.stdin.buffer.read().decode("utf-8-sig")
+    else:
+        with open(str(settings.input), encoding="utf-8-sig") as file:
+            text = file.read()
+    return PayloadInput.model_validate_json(text)
 
 
 @contextmanager
@@ -57,6 +61,8 @@ def run_service(settings: CliSettings, client: httpx2.Client) -> int:
         return report_error(f"could not reach {settings.host}: {error}")
     except OSError as error:
         return report_error(str(error))
+    except UnicodeDecodeError:
+        return report_error("input is not valid UTF-8")
     except ValidationError as error:
         return report_error(
             f"input is not a valid payload: {format_validation_error(error)}"
