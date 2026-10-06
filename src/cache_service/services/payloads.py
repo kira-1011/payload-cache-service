@@ -11,7 +11,7 @@ def interleave(list_1: Sequence[str], list_2: Sequence[str]) -> list[str]:
 
 
 def hash_payload_input(list_1: Sequence[str], list_2: Sequence[str]) -> str:
-    """Stable key identifying a payload by its input."""
+    """Return the SHA-256 hex digest of both lists serialized as nested JSON."""
     # Nested JSON keeps list boundaries and escapes commas, so distinct inputs can't collide.
     serialized = json.dumps([list_1, list_2])
     return hashlib.sha256(serialized.encode()).hexdigest()
