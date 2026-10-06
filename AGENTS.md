@@ -230,7 +230,6 @@ Postgres sources:
 
 - **`db`:**
   - Image `postgres:18.x-trixie`, pinned to a minor version.
-  - `shm_size: 128mb`, as in the official image's compose example, so Postgres has enough shared memory.
   - Healthcheck with `pg_isready`. Other services wait on it with `condition: service_healthy`.
   - Named volume mounted at **`/var/lib/postgresql`**. Since Postgres 18, `PGDATA` is version-specific (`/var/lib/postgresql/18/docker`). The old `/var/lib/postgresql/data` mount doesn't persist data, and mounting the parent directory allows `pg_upgrade --link` later.
   - Publish the port as `127.0.0.1:5432:5432`: only this machine can reach it, for local tools such as `fastapi dev` and Alembic, not the whole network.
