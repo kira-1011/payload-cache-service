@@ -2,8 +2,29 @@
 name: payload-cache-service
 
 services:
+  db:
+    image: postgres:18.6-trixie
+    environment:
+      # Local-only credentials.
+      POSTGRES_USER: payload_cache
+      POSTGRES_PASSWORD: payload_cache
+      POSTGRES_DB: payload_cache
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres 18 keeps its data under /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   api:
     build: .
     image: payload-cache-service
     ports:
       - "8000:8000"
+
+volumes:
+  pgdata:
