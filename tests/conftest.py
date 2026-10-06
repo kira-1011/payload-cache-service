@@ -4,6 +4,8 @@ import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+from cache_service import models  # noqa: F401  (registers the tables)
+
 
 @pytest.fixture
 def session() -> Iterator[Session]:
