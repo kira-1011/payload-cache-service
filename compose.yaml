@@ -1,0 +1,9 @@
+# Explicit name, so containers and networks don't take the folder's name.
+name: payload-cache-service
+
+services:
+  api:
+    build: .
+    image: payload-cache-service
+    ports:
+      - "8000:8000"
