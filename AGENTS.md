@@ -224,11 +224,17 @@ Sources:
 
 ### compose.yaml rules
 
+Postgres sources:
+- Docker's PostgreSQL guide: https://docs.docker.com/guides/postgresql/
+- the official `postgres` image page: https://hub.docker.com/_/postgres
+
 - **`db`:**
   - Image `postgres:18.x-trixie`, pinned to a minor version.
-  - Healthcheck with `pg_isready`.
-  - Named volume mounted at **`/var/lib/postgresql`**. Postgres 18 moved its data directory, so the old `/var/lib/postgresql/data` mount fails.
-  - Publish `5432:5432` only for running `fastapi dev` on the host against it.
+  - Healthcheck with `pg_isready`. Other services wait on it with `condition: service_healthy`.
+  - Named volume mounted at **`/var/lib/postgresql`**. Since Postgres 18, `PGDATA` is version-specific (`/var/lib/postgresql/18/docker`). The old `/var/lib/postgresql/data` mount doesn't persist data, and mounting the parent directory allows `pg_upgrade --link` later.
+  - Publish the port as `127.0.0.1:5432:5432`: only this machine can reach it, for local tools such as `fastapi dev` and Alembic, not the whole network.
+  - The plain-text `POSTGRES_*` credentials are local-only. In production, use Docker secrets through the `_FILE` variants (e.g. `POSTGRES_PASSWORD_FILE`).
+  - `POSTGRES_*` variables and init scripts only take effect when the data directory is empty. After changing them, recreate the volume with `docker compose down -v`.
 - **`migrate`:**
   - Same image as `api`, with `command: ["alembic", "upgrade", "head"]`.
   - `depends_on: db: condition: service_healthy`.

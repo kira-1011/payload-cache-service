@@ -2,8 +2,45 @@
 name: payload-cache-service
 
 services:
+  db:
+    image: postgres:18.6-trixie
+    environment:
+      # Local-only credentials.
+      POSTGRES_USER: payload_cache
+      POSTGRES_PASSWORD: payload_cache
+      POSTGRES_DB: payload_cache
+    ports:
+      # Reachable from this machine only, for local tools such as Alembic.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Postgres 18 keeps its data under /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # Applies migrations once, so API replicas never race on schema changes.
+  migrate:
+    image: payload-cache-service
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://payload_cache:payload_cache@db:5432/payload_cache
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build: .
     image: payload-cache-service
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://payload_cache:payload_cache@db:5432/payload_cache
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
