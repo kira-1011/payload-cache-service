@@ -1,5 +1,5 @@
 import argparse
-from typing import Self
+from typing import Any, Self
 
 from pydantic import (
     AliasChoices,
@@ -80,6 +80,26 @@ class CliSettings(BaseSettings, cli_hide_none_type=True):
         return self
 
 
+# Placeholders from the task spec's usage line, instead of the Python types.
+METAVARS = {
+    "--host": "URL",
+    "--repeat": "N",
+    "--input": "FILE|-",
+    "--json": "JSON",
+    "--output": "FILE|-",
+}
+
+
+def add_cli_argument(
+    parser: argparse.ArgumentParser, *names: str, **kwargs: Any
+) -> argparse.Action:
+    """Add an option with the spec's placeholder and without a "(default: null)" note."""
+    kwargs["metavar"] = METAVARS.get(names[-1], kwargs.get("metavar"))
+    if kwargs.get("help"):
+        kwargs["help"] = kwargs["help"].removesuffix(" (default: null)")
+    return parser.add_argument(*names, **kwargs)
+
+
 def parse_settings(args: list[str] | None = None) -> CliSettings:
     """Parse command-line arguments (sys.argv by default) into validated settings."""
     # argparse reserves -h for help, but the spec assigns -h to --host; help stays on --help.
@@ -87,5 +107,7 @@ def parse_settings(args: list[str] | None = None) -> CliSettings:
         prog="cache-cli", description=CliSettings.__doc__, add_help=False
     )
     parser.add_argument("--help", action="help", help="show this help message and exit")
-    source = CliSettingsSource(CliSettings, root_parser=parser)
+    source = CliSettingsSource(
+        CliSettings, root_parser=parser, add_argument_method=add_cli_argument
+    )
     return CliApp.run(CliSettings, cli_args=args, cli_settings_source=source)

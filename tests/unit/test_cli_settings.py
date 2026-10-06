@@ -44,6 +44,23 @@ def test_help_is_on_long_flag_only(capsys: pytest.CaptureFixture[str]) -> None:
     assert "-h, --host" in capsys.readouterr().out
 
 
+def test_help_uses_the_spec_placeholders(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        parse_settings(["--help"])
+
+    help_text = capsys.readouterr().out
+    for option in [
+        "--host URL",
+        "--repeat N",
+        "--input FILE|-",
+        "--json JSON",
+        "--output FILE|-",
+    ]:
+        assert option in help_text
+    assert "HttpUrl" not in help_text
+    assert "(default: null)" not in help_text
+
+
 def test_environment_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HOST", "http://from-env:1")
 
