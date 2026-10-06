@@ -13,6 +13,9 @@ Requires [uv](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync
+cp .env.example .env            # DATABASE_URL for the local Postgres
+docker compose up -d db         # Postgres only
+uv run alembic upgrade head
 uv run fastapi dev
 ```
 
@@ -23,6 +26,8 @@ The API docs are served at http://localhost:8000/docs.
 ```sh
 docker compose up --build
 ```
+
+This starts Postgres, applies the migrations once, and then starts the API.
 
 ## Stack
 
