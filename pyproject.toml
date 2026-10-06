@@ -29,3 +29,15 @@ dev = [
     "ruff>=0.16.10",
     "ty>=0.0.84",
 ]
+
+[tool.ruff.lint]
+# Ruff's defaults (pyflakes + basic pycodestyle) plus three rule sets the formatter doesn't cover.
+extend-select = [
+    "I",   # import sorting
+    "B",   # flake8-bugbear: common bug patterns (mutable defaults, etc.)
+    "UP",  # pyupgrade: modern syntax for the target Python version
+]
+
+[tool.pytest]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
