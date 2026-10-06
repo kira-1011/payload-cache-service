@@ -41,3 +41,6 @@ extend-select = [
 [tool.pytest]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
+
+[tool.fastapi]
+entrypoint = "cache_service.main:app"
