@@ -1,8 +1,12 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid7
 
-from sqlalchemy import DateTime, func
 from sqlmodel import Field, SQLModel
+
+
+def utc_now() -> datetime:
+    """Return the current time as a timezone-aware UTC datetime."""
+    return datetime.now(UTC)
 
 
 class TransformResult(SQLModel, table=True):
@@ -12,12 +16,7 @@ class TransformResult(SQLModel, table=True):
 
     input_hash: str = Field(primary_key=True, max_length=64)
     output_text: str
-    created_at: datetime | None = Field(
-        default=None,
-        nullable=False,
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now()},
-    )
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 class Payload(SQLModel, table=True):
@@ -26,9 +25,4 @@ class Payload(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     input_hash: str = Field(unique=True, max_length=64)
     output: str
-    created_at: datetime | None = Field(
-        default=None,
-        nullable=False,
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now()},
-    )
+    created_at: datetime = Field(default_factory=utc_now)
