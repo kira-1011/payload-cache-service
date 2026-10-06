@@ -48,6 +48,33 @@ curl localhost:8000/payload/<uuid>
 Both lists must be non-empty and the same length, with at most 1,000 items of at most 1,000
 characters each.
 
+## CLI
+
+`cache-cli` posts a payload, reads it back by its id, and writes one JSON line per round trip.
+
+```text
+cache-cli [-h|--host URL] [-r|--repeat N] [-i|--input FILE|-] [-j|--json JSON] [-o|--output FILE|-] [--help]
+```
+
+```sh
+uv run cache-cli -j '{"list_1": ["first string"], "list_2": ["other string"]}' -r 3
+uv run cache-cli -i payload.json -o results.jsonl
+cat payload.json | uv run cache-cli -i -
+```
+
+- Pass exactly one of `--input` and `--json`. Both take the same JSON body as `POST /payload`.
+- `-h` is `--host` as in the task spec, so help is `--help` only.
+- Exit codes: `0` success, `1` request or input failure, `2` invalid arguments.
+- Input files and stdin are read as UTF-8; a byte order mark (as written by Windows PowerShell) is accepted.
+
+Windows PowerShell 5.1 strips double quotes from arguments passed to programs. Escape them,
+use `--%` when the JSON contains spaces, or pass a file with `-i`:
+
+```powershell
+uv run cache-cli -j '{\"list_1\":[\"a\"],\"list_2\":[\"b\"]}'
+uv run cache-cli --% -j "{\"list_1\":[\"first string\"],\"list_2\":[\"other string\"]}"
+```
+
 ## Stack
 
 Python 3.14 · uv · FastAPI · SQLModel · Alembic · PostgreSQL · pydantic-settings · httpx2 · pytest ·
