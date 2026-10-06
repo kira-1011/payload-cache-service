@@ -29,6 +29,25 @@ docker compose up --build
 
 This starts Postgres, applies the migrations once, and then starts the API.
 
+## API
+
+| Method | Path | Success | Errors |
+|---|---|---|---|
+| `POST` | `/payload` | `201` new payload (with `Location` header), `200` payload already existed | `422` invalid input |
+| `GET` | `/payload/{id}` | `200` `{"output": "..."}` | `404` unknown id, `422` malformed id |
+
+```sh
+curl -X POST localhost:8000/payload -H "content-type: application/json" \
+  -d '{"list_1": ["first string", "second string"], "list_2": ["other string", "another string"]}'
+# {"id": "<uuid>", "message": "Payload created"}
+
+curl localhost:8000/payload/<uuid>
+# {"output": "FIRST STRING, OTHER STRING, SECOND STRING, ANOTHER STRING"}
+```
+
+Both lists must be non-empty and the same length, with at most 1,000 items of at most 1,000
+characters each.
+
 ## Stack
 
 Python 3.14 · uv · FastAPI · SQLModel · Alembic · PostgreSQL · pydantic-settings · httpx2 · pytest ·
