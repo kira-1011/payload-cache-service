@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from cache_cli.main import main
 from cache_cli.settings import parse_settings
 
 BODY = '{"list_1": ["a"], "list_2": ["b"]}'
@@ -64,3 +65,12 @@ def test_invalid_arguments_are_rejected(args: list[str]) -> None:
     with pytest.raises(ValidationError):
         parse_settings(args)
 
+
+def test_main_reports_invalid_arguments_with_exit_code_2(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        main(["-j", BODY, "-r", "0"])
+
+    assert exit_info.value.code == 2
+    assert "invalid arguments: -r:" in capsys.readouterr().err
