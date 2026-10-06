@@ -131,6 +131,7 @@ Stack rules:
 │   │   ├── config.py            # service Settings (pydantic-settings, env vars)
 │   │   ├── db.py                # engine + session dependency
 │   │   ├── models.py            # SQLModel tables
+│   │   ├── crud.py              # data-access functions shared by the services
 │   │   ├── schemas.py           # API request/response models
 │   │   ├── dependencies.py      # Annotated Depends alias: SessionDep
 │   │   ├── routers/             # HTTP layer only
@@ -146,15 +147,17 @@ Stack rules:
     └── integration/             # API through TestClient, CLI end to end
 ```
 
-Layering rules (dependencies point inward: `routers` → `services` → `models`):
+Layering rules (dependencies point inward: `routers` → `services` → `crud` → `models`):
 
 - `routers/` handles HTTP only. A route parses the request, calls one service function, and maps the result or a domain error to a status code and response. It contains no caching or DB logic. Following the FastAPI skill, each router declares its `prefix` and `tags` on the `APIRouter` itself, and `main.py` only calls `include_router`.
 - `services/` holds the business logic as **plain module-level functions**, not classes and not a repository layer.
   - It never imports `fastapi`.
-  - It receives the DB `Session` as an argument.
+  - It receives the DB `Session` as an argument, never creates its own (SQLAlchemy: keep the session lifecycle outside data-access code).
+  - It reads through `crud.py` and owns the transaction: one `session.commit()` per unit of work.
   - It calls the transformer as `transformer.transform(...)`, via `from cache_service.services import transformer`. Because the call goes through the module attribute, a test can patch `transformer.transform` in one place.
-  - Pure helpers such as `interleave` and `fingerprint` live in `services/payloads.py` and have no I/O at all.
+  - Pure helpers such as `interleave` and `hash_payload_input` live in `services/payloads.py` and have no I/O at all.
 - `services/transformer.py` is a stand-in for an external dependency rather than real business logic.
+- `crud.py` holds plain data-access functions that take a `Session` (e.g. `get_payload_by_input_hash`), as in the official FastAPI template. No classes and no repository pattern: there are only a few queries.
 - `dependencies.py` provides the DB session to routes as `SessionDep = Annotated[Session, Depends(get_session)]`. Tests override it with `app.dependency_overrides` to use SQLite.
 - Signal "not found" with a domain exception or a `None` return, never `HTTPException`. Only routers translate errors into HTTP responses.
 - `cache_cli` never imports `cache_service`. It talks to the service only over HTTP.

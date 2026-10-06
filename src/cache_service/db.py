@@ -4,7 +4,8 @@ from sqlmodel import Session, create_engine
 
 from cache_service.config import settings
 
-engine = create_engine(settings.database_url)
+# pre_ping replaces pooled connections that died, e.g. after a database restart.
+engine = create_engine(settings.database_url, pool_pre_ping=True)
 
 
 def get_session() -> Iterator[Session]:
