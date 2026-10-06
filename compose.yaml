@@ -23,11 +23,26 @@ services:
       timeout: 5s
       retries: 15
 
+  # Applies migrations once, so API replicas never race on schema changes.
+  migrate:
+    image: payload-cache-service
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://payload_cache:payload_cache@db:5432/payload_cache
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build: .
     image: payload-cache-service
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://payload_cache:payload_cache@db:5432/payload_cache
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
