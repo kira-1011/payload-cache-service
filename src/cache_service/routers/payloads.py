@@ -19,7 +19,8 @@ router = APIRouter(prefix="/payload", tags=["payloads"])
     },
 )
 # slowapi needs the request (and the response, for its headers) in the signature.
-@limiter.limit(settings.rate_limit)
+# The limit is a callable, so it is read per request rather than fixed at import.
+@limiter.limit(lambda: settings.rate_limit)
 def create_payload(
     body: PayloadCreate, session: SessionDep, request: Request, response: Response
 ) -> PayloadCreateResponse:
@@ -35,7 +36,7 @@ def create_payload(
 
 
 @router.get("/{payload_id}")
-@limiter.limit(settings.rate_limit)
+@limiter.limit(lambda: settings.rate_limit)
 def get_payload(
     payload_id: UUID, session: SessionDep, request: Request, response: Response
 ) -> PayloadResponse:

@@ -7,6 +7,7 @@ from pydantic import (
     BaseModel,
     Field,
     HttpUrl,
+    PrivateAttr,
     ValidationError,
     model_validator,
 )
@@ -56,6 +57,14 @@ class CliSettings(BaseSettings, cli_hide_none_type=True):
         description="file to write results to, or - for stdout",
     )
 
+    # Parsed once by check_payload_source, so the CLI never parses --json twice.
+    _json_payload: PayloadInput | None = PrivateAttr(default=None)
+
+    @property
+    def json_payload(self) -> PayloadInput | None:
+        """Return the --json payload parsed during validation, or None with --input."""
+        return self._json_payload
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -74,7 +83,7 @@ class CliSettings(BaseSettings, cli_hide_none_type=True):
             raise ValueError("pass exactly one of --input or --json")
         if self.json_body is not None:
             try:
-                PayloadInput.model_validate_json(self.json_body)
+                self._json_payload = PayloadInput.model_validate_json(self.json_body)
             except ValidationError as error:
                 reason = error.errors()[0]["msg"]
                 raise ValueError(f"--json is not a valid payload ({reason})") from error

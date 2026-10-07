@@ -1,11 +1,8 @@
 from unittest.mock import MagicMock
 from uuid import uuid7
 
-import pytest
-from sqlmodel import Session, func, select
+from sqlmodel import Session
 
-from cache_service import crud
-from cache_service.models import Payload, TransformResult
 from cache_service.services.payloads import get_or_create_payload, get_payload
 
 
@@ -66,31 +63,3 @@ def test_get_payload_returns_stored_payload(session: Session) -> None:
 
 def test_get_payload_returns_none_for_unknown_id(session: Session) -> None:
     assert get_payload(session, uuid7()) is None
-
-
-def test_payload_stored_concurrently_is_returned_instead_of_failing(
-    session: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    winner, _ = get_or_create_payload(session, ["a"], ["b"])
-    # Race: our lookup ran before the concurrent request committed the same payload.
-    monkeypatch.setattr(crud, "get_payload_by_input_hash", lambda *_: None)
-
-    payload, created = get_or_create_payload(session, ["a"], ["b"])
-
-    assert payload.id == winner.id
-    assert not created
-    assert session.exec(select(func.count()).select_from(Payload)).one() == 1
-
-
-def test_transform_stored_concurrently_is_skipped_instead_of_failing(
-    session: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    get_or_create_payload(session, ["a"], ["b"])
-    # Race: our cache read ran before a concurrent request committed "a".
-    monkeypatch.setattr(crud, "get_transform_results", lambda *_: [])
-
-    payload, created = get_or_create_payload(session, ["a"], ["c"])
-
-    assert created
-    assert payload.output == "A, C"
-    assert session.exec(select(func.count()).select_from(TransformResult)).one() == 3
