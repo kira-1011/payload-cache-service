@@ -9,8 +9,10 @@ dependencies = [
     "fastapi>=0.142.2",
     "fastapi-cli>=0.0.32",
     "httpx2>=2.13.1",
+    "limits>=5.8.0",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.15.0",
+    "slowapi>=0.1.10",
     "sqlmodel>=0.0.47",
 ]
 
@@ -44,6 +46,10 @@ extend-select = [
 [tool.pytest]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
+filterwarnings = [
+    # Raised inside slowapi 0.1.10, which calls an asyncio function deprecated in Python 3.14.
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:slowapi",
+]
 
 [tool.fastapi]
 entrypoint = "cache_service.main:app"

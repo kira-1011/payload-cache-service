@@ -41,6 +41,8 @@ def client(session: Session) -> Iterator[TestClient]:
     from cache_service.main import app
 
     app.dependency_overrides[get_session] = lambda: session
+    # Rate-limit counters live in memory for the whole test run; start each test at zero.
+    app.state.limiter.reset()
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
