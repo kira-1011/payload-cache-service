@@ -91,3 +91,17 @@ def test_main_reports_invalid_arguments_with_exit_code_2(
 
     assert exit_info.value.code == 2
     assert "invalid arguments: -r:" in capsys.readouterr().err
+
+
+def test_help_starts_with_an_aligned_banner(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        parse_settings(["--help"])
+
+    box = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith(("+", "|"))
+    ]
+    assert len(box) == 4
+    assert "CACHE CLI v" in box[1]
+    assert len({len(line) for line in box}) == 1  # every row is the same width

@@ -1,4 +1,5 @@
 import argparse
+from importlib.metadata import version
 from typing import Any, Self
 
 from pydantic import (
@@ -100,11 +101,26 @@ def add_cli_argument(
     return parser.add_argument(*names, **kwargs)
 
 
+def banner() -> str:
+    """Return the boxed name and version shown at the top of --help."""
+    width = 42
+    lines = [
+        f"CACHE CLI v{version('payload-cache-service')}",
+        "payload cache service utility",
+    ]
+    border = "+" + "-" * width + "+"
+    return "\n".join([border, *(f"|{line.center(width)}|" for line in lines), border])
+
+
 def parse_settings(args: list[str] | None = None) -> CliSettings:
     """Parse command-line arguments (sys.argv by default) into validated settings."""
     # argparse reserves -h for help, but the spec assigns -h to --host; help stays on --help.
+    # The banner lives in --help only: normal runs print JSON lines that tools parse.
     parser = argparse.ArgumentParser(
-        prog="cache-cli", description=CliSettings.__doc__, add_help=False
+        prog="cache-cli",
+        description=f"{banner()}\n\n{CliSettings.__doc__}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
     )
     parser.add_argument("--help", action="help", help="show this help message and exit")
     source = CliSettingsSource(
