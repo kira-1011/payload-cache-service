@@ -34,12 +34,16 @@ def transform_with_cache(session: Session, texts: Iterable[str]) -> dict[str, st
     cached = crud.get_transform_results(session, list(texts_by_hash))
     results = {texts_by_hash[row.input_hash]: row.output_text for row in cached}
 
-    for input_hash, text in texts_by_hash.items():
-        if text not in results:
-            output_text = transformer.transform(text)
-            # Added, not committed: the caller commits once for the whole request.
-            session.add(TransformResult(input_hash=input_hash, output_text=output_text))
-            results[text] = output_text
+    new_results = [
+        TransformResult(input_hash=input_hash, output_text=transformer.transform(text))
+        for input_hash, text in texts_by_hash.items()
+        if text not in results
+    ]
+    # Inserted, not committed: the caller commits once for the whole request.
+    crud.insert_transform_results(session, new_results)
+    results.update(
+        {texts_by_hash[row.input_hash]: row.output_text for row in new_results}
+    )
     return results
 
 
@@ -59,12 +63,14 @@ def get_or_create_payload(
             [transformed[text] for text in list_2],
         )
     )
-    payload = Payload(input_hash=input_hash, output=output)
-    session.add(payload)
+    # A concurrent request may have stored the same payload since the lookup above;
+    # the insert then keeps theirs and reports created=False instead of failing.
+    payload, created = crud.insert_payload(
+        session, Payload(input_hash=input_hash, output=output)
+    )
     # One commit, so the payload and its new cache rows are saved together or not at all.
     session.commit()
-    session.refresh(payload)
-    return payload, True
+    return payload, created
 
 
 def get_payload(session: Session, payload_id: UUID) -> Payload | None:
