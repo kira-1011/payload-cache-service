@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from cache_cli.main import main
-from cache_cli.settings import parse_settings
+from cache_cli.settings import PayloadInput, parse_settings
 
 BODY = '{"list_1": ["a"], "list_2": ["b"]}'
 
@@ -105,3 +105,10 @@ def test_help_starts_with_an_aligned_banner(capsys: pytest.CaptureFixture[str]) 
     assert len(box) == 4
     assert "CACHE CLI v" in box[1]
     assert len({len(line) for line in box}) == 1  # every row is the same width
+
+
+def test_json_payload_is_parsed_once_during_validation() -> None:
+    assert parse_settings(["-j", BODY]).json_payload == PayloadInput(
+        list_1=["a"], list_2=["b"]
+    )
+    assert parse_settings(["-i", "payload.json"]).json_payload is None

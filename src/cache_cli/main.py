@@ -12,8 +12,8 @@ from cache_cli.settings import CliSettings, PayloadInput, parse_settings
 
 def load_payload(settings: CliSettings) -> PayloadInput:
     """Return the payload from --json, or from the --input file (- reads stdin)."""
-    if settings.json_body is not None:
-        return PayloadInput.model_validate_json(settings.json_body)
+    if settings.json_payload is not None:
+        return settings.json_payload
     # JSON is UTF-8 (RFC 8259), so decode it explicitly rather than with the locale's code
     # page (cp1252 on Windows). utf-8-sig also drops the BOM Windows PowerShell adds.
     if settings.input == "-":
