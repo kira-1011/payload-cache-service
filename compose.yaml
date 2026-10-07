@@ -38,6 +38,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg://payload_cache:payload_cache@db:5432/payload_cache
+      RATE_LIMIT: ${RATE_LIMIT:-100/minute}
     depends_on:
       migrate:
         condition: service_completed_successfully

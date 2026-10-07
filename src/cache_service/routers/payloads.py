@@ -2,7 +2,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from cache_service.config import settings
 from cache_service.dependencies import SessionDep
+from cache_service.rate_limit import limiter
 from cache_service.schemas import PayloadCreate, PayloadCreateResponse, PayloadResponse
 from cache_service.services import payloads
 
@@ -16,6 +18,8 @@ router = APIRouter(prefix="/payload", tags=["payloads"])
         status.HTTP_200_OK: {"description": "Payload already existed for this input"}
     },
 )
+# slowapi needs the request (and the response, for its headers) in the signature.
+@limiter.limit(settings.rate_limit)
 def create_payload(
     body: PayloadCreate, session: SessionDep, request: Request, response: Response
 ) -> PayloadCreateResponse:
@@ -31,7 +35,10 @@ def create_payload(
 
 
 @router.get("/{payload_id}")
-def get_payload(payload_id: UUID, session: SessionDep) -> PayloadResponse:
+@limiter.limit(settings.rate_limit)
+def get_payload(
+    payload_id: UUID, session: SessionDep, request: Request, response: Response
+) -> PayloadResponse:
     payload = payloads.get_payload(session, payload_id)
     if payload is None:
         raise HTTPException(

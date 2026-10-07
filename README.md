@@ -126,6 +126,15 @@ Where the spec is open, I chose the simplest reading:
 - **The CLI** does one round trip per iteration (POST, then GET by the returned id). `--repeat N` runs N round trips. `--input` and `--json` take the same JSON body as the API, and the output is one JSON line per round trip.
 - **`-h`** is listed in the spec for both `--host` and `--help`. It means `--host` here, and help is `--help` only.
 
+## Extras
+
+Features beyond the task spec:
+
+- **Rate limiting** with [slowapi](https://github.com/laurentS/slowapi): each client IP can call each
+  endpoint 100 times per minute, configurable with `RATE_LIMIT` (e.g. `RATE_LIMIT=5/minute docker compose up`).
+  Over the limit, the API returns `429` with a `Retry-After` header. Counters are kept in memory, so
+  several API containers would need shared storage such as Redis.
+
 ## Shortcuts and known limitations
 
 - **Tests run on in-memory SQLite**, so they need no Docker. Postgres-specific behavior (migrations, reconnecting after a restart, the concurrency fix) was checked by hand against the Docker stack.
@@ -164,6 +173,7 @@ src/cache_service/       FastAPI service
   schemas.py             request and response models
   crud.py                database queries and inserts
   dependencies.py        SessionDep
+  rate_limit.py          slowapi limiter
   routers/payloads.py    POST /payload, GET /payload/{id}
   services/payloads.py   caching and payload generation
   services/transformer.py
