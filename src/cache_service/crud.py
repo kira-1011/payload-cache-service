@@ -56,9 +56,9 @@ def insert_payload(session: Session, payload: Payload) -> tuple[Payload, bool]:
         .on_conflict_do_nothing(index_elements=["input_hash"])
         .returning(col(Payload.id))
     ).first()
-    stored = session.exec(
-        select(Payload).where(col(Payload.input_hash) == payload.input_hash)
-    ).one()
+    stored = get_payload_by_input_hash(session, payload.input_hash)
+    # Either this insert stored it, or the conflicting row from another request exists.
+    assert stored is not None
     return stored, inserted is not None
 
 
